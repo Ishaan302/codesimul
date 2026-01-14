@@ -1,52 +1,20 @@
-#include <bits/stdc++.h>
+// Start coding here...
+#include <iostream>
 using namespace std;
- 
-#define ll long long
- 
-void solve() {
-   
-   ll  n ; 
-   cin>>n;
- 
-   vector<ll>a(n);
-   for(ll &x : a)cin>>x;
- 
-   sort(a.begin() , a.end());
- 
-   vector<ll>odd , even;
-   for(ll i = 0 ; i<n ; i++){
-      if(a[i] % 2==0){
-         even.push_back(a[i]);
-      }else{
-         odd.push_back(a[i]);
-      }
-   }
- 
-   if(odd.empty() || even.empty()){
-      cout<<"0"<<endl;
-      return;
-   }
- 
-   ll ans = even.size();
-   ll sum = odd.back();
- 
-   for(ll i = 0  ; i<even.size() ; i++){
-      if(even[i]<sum){
-         sum+=even[i];
-      }else{
-         ans++;
-         break;
-      }
-   }
-   cout<<ans<<endl;
+#define ll long long 
+ll stick(ll x, ll y, ll k){
+    ll maxstick = y * k + k;
+    ll add = x - 1;
+    ll step = (maxstick - 1 + add - 1) / add; 
+    return step + k;
 }
- 
-int main()
-{
-    ios::sync_with_stdio(false);
-    cin.tie(nullptr);
- 
+int main() {
     int t;
     cin >> t;
-    while (t--) solve();
+    while(t--){
+        ll x, y, k;
+        cin >> x >> y >> k;
+        cout << stick(x,y,k)<< endl;
+    }
+    return 0;
 }

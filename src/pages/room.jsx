@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Editor from "@monaco-editor/react";
+import socket from "../socket";
 
 function Room() {
   const navigate = useNavigate();
   const { roomId } = useParams();
+  const isRemoteUpdate = useRef(false);
 
   /* ---------------- Layout ---------------- */
   const [leftWidth, setLeftWidth] = useState(40);
@@ -28,6 +30,57 @@ function Room() {
   const drawing = useRef(false);
   const editorRef = useRef(null);
   const [strokeColor, setStrokeColor] = useState("black");
+
+  // 🔹 SOCKET CONNECTION 
+useEffect(() => {
+  socket.connect();
+  socket.emit("join-room", roomId);
+
+  return () => {
+    socket.disconnect();
+  };
+}, [roomId]);
+
+useEffect(() => {
+  socket.on("code-update", (newCode) => {
+    isRemoteUpdate.current = true;
+    setCode(newCode);
+
+    // allow next local change
+    setTimeout(() => {
+      isRemoteUpdate.current = false;
+    }, 0);
+  });
+
+  return () => {
+    socket.off("code-update");
+  };
+}, []);
+
+useEffect(() => {
+  const canvas = canvasRef.current;
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+
+  socket.on("draw", ({ x0, y0, x1, y1, color }) => {
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+  });
+
+  socket.on("clear-board", () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  });
+
+  return () => {
+    socket.off("draw");
+    socket.off("clear-board");
+  };
+}, []);
+
+
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -65,15 +118,36 @@ function Room() {
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.strokeStyle = strokeColor;
+
+    ctx.currentX = x;
+    ctx.currentY = y;
   };
 
   const draw = (e) => {
     if (!drawing.current) return;
+  
     const ctx = canvasRef.current.getContext("2d");
     const { x, y } = getCanvasPos(e);
+  
+    const prevX = ctx.currentX || x;
+    const prevY = ctx.currentY || y;
+  
     ctx.lineTo(x, y);
     ctx.stroke();
+  
+    socket.emit("draw", {
+      roomId,
+      x0: prevX,
+      y0: prevY,
+      x1: x,
+      y1: y,
+      color: strokeColor,
+    });
+  
+    ctx.currentX = x;
+    ctx.currentY = y;
   };
+  
 
   const stopDraw = () => {
     drawing.current = false;
@@ -82,7 +156,10 @@ function Room() {
   const clearBoard = () => {
     const ctx = canvasRef.current.getContext("2d");
     ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+  
+    socket.emit("clear-board", roomId);
   };
+  
 
   /* ---------------- Actions ---------------- */
   const handleRunCode = async () => {
@@ -268,7 +345,18 @@ function Room() {
               defaultLanguage="cpp"
               theme="vs-dark"
               value={code}
-              onChange={(value) => setCode(value || "")}
+              onChange={(value) => {
+                const newCode = value || "";
+                setCode(newCode);
+              
+                if (!isRemoteUpdate.current) {
+                  socket.emit("code-change", {
+                    roomId,
+                    code: newCode,
+                  });
+                }
+              }}
+              
               onMount={(editor) => {
                 editorRef.current = editor;
                 editor.layout();
