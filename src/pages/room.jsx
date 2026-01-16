@@ -7,45 +7,7 @@ function Room() {
   const navigate = useNavigate();
   const { roomId } = useParams();
   const isRemoteUpdate = useRef(false);
-  const fetchCFMeta = async (contestId, index) => {
-    const res = await fetch(
-      `https://codeforces.com/api/problemset.problem?contestId=${contestId}&index=${index}`
-    );
-    const data = await res.json();
-    return data.result.problem;
-  };
  
-
-  /* ---------------- PARSER ---------------- */
-  const parseCodeforcesLink = (link) => {
-    try {
-      const url = new URL(link);
-      const path = url.pathname;
-      const parts = path.split("/").filter(Boolean);
-
-      if (parts[0] === "problemset" && parts[1] === "problem") {
-        return {
-          contestId: parts[2],
-          index: parts[3],
-        };
-      }
-
-      if (parts[0] === "contest" && parts[2] === "problem") {
-        return {
-          contestId: parts[1],
-          index: parts[3],
-        };
-      }
-
-      return null;
-    } catch {
-      return null;
-    }
-  };
-
-  /* ---------------- CF STATE ---------------- */
-  const [parsedQuestion, setParsedQuestion] = useState(null);
-  const [problemData, setProblemData] = useState(null);
 
   /* ---------------- Layout ---------------- */
   const [leftWidth, setLeftWidth] = useState(40);
