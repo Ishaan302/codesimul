@@ -13,7 +13,14 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:3000",
+    "https://codesimul-4rxt-k02oye2se-ishaan302s-projects.vercel.app"
+  ],
+  methods: ["GET", "POST"],
+}));
+
 app.use(express.json());
 
 // Codeforces persistent agent
@@ -85,12 +92,13 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: [
-      "http://localhost:3000",
-      "https://codesimul.vercel.app" // deployed frontend
+      "http://localhost:3000", // local dev
+      "https://codesimul-4rxt-k02oye2se-ishaan302s-projects.vercel.app" // deployed frontend
     ],
-    methods: ["GET", "POST"]
-  }
+    methods: ["GET", "POST"],
+  },
 });
+
 
 
 io.on("connection", (socket) => {

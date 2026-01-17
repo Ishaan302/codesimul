@@ -7,7 +7,6 @@ function Room() {
   const navigate = useNavigate();
   const { roomId } = useParams();
   const isRemoteUpdate = useRef(false);
- 
 
   /* ---------------- Layout ---------------- */
   const [leftWidth, setLeftWidth] = useState(40);
@@ -32,13 +31,14 @@ function Room() {
   const editorRef = useRef(null);
   const [strokeColor, setStrokeColor] = useState("black");
 
-  /* ---------------- SOCKET ---------------- */
+  /* ---------------- SOCKET SETUP ---------------- */
   useEffect(() => {
     socket.connect();
     socket.emit("join-room", roomId);
     return () => socket.disconnect();
   }, [roomId]);
 
+  /* ---------------- Code Sync ---------------- */
   useEffect(() => {
     socket.on("code-update", (newCode) => {
       isRemoteUpdate.current = true;
@@ -48,6 +48,7 @@ function Room() {
     return () => socket.off("code-update");
   }, []);
 
+  /* ---------------- Whiteboard Sync ---------------- */
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -68,14 +69,15 @@ function Room() {
     socket.on("open-problem", (link) => {
       window.open(link, "_blank");
     });
-   
 
     return () => {
       socket.off("draw");
       socket.off("clear-board");
+      socket.off("open-problem");
     };
   }, []);
 
+  /* ---------------- Canvas Resize ---------------- */
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -146,19 +148,22 @@ function Room() {
   /* ---------------- CODE RUNNER ---------------- */
   const handleRunCode = async () => {
     setOutput("Running code...");
-  
+
     const BACKEND_URL =
       process.env.NODE_ENV === "production"
-        ? "https://your-backend.onrender.com"   // <-- replace after deploy
+        ? "https://codesimul-1.onrender.com"
         : "http://localhost:5001";
-  
+
+    const FALLBACK_URL = "https://codesimul-1.onrender.com";
+    const FINAL_URL = BACKEND_URL || FALLBACK_URL;
+
     try {
-      const res = await fetch(`${BACKEND_URL}/run`, {
+      const res = await fetch(`${FINAL_URL}/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, input }),
       });
-  
+
       const data = await res.json();
       setOutput(data.output || "No output");
     } catch (err) {
@@ -166,12 +171,12 @@ function Room() {
       setOutput("Error connecting to backend");
     }
   };
-  
 
   const handleLeaveRoom = () => {
     if (window.confirm("Leave the room?")) navigate("/");
   };
 
+  /* ---------------- UI ---------------- */
   return (
     <div className="h-screen w-screen bg-slate-900 flex overflow-hidden">
       {/* LEFT */}
@@ -207,10 +212,7 @@ function Room() {
                   if (!questionLink) return;
                   socket.emit("open-problem", { roomId, link: questionLink, sender: socket.id });
                   window.open(questionLink, "_blank");
-
                 }}
-               
-               
                 className="bg-purple-600 text-white px-4 rounded text-sm"
               >
                 Load
