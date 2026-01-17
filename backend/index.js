@@ -11,7 +11,7 @@ const https = require("https");
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 const app = express();
-const PORT = 5001;
+const PORT = process.env.PORT || 5001;
 
 app.use(cors());
 app.use(express.json());
@@ -84,8 +84,12 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"],
+    origin: [
+      "https://your-frontend.vercel.app",
+      "http://localhost:3000"
+    ],
+    methods: ["GET", "POST"]
+    
   },
 });
 
